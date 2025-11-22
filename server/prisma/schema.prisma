@@ -1,0 +1,82 @@
+// Prisma Schema File for Receipt Manager
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // 이 줄을 추가 (또는 주석 해제) 하세요.
+}
+
+// 1. 직원 정보 (Employee 모델) - 인증 및 역할 필드 추가
+model Employee {
+  id               Int                @id @default(autoincrement())
+  employeeId       String             @unique // 사번 (로그인 ID)
+  name             String
+  email            String             @unique
+  password         String             // 비밀번호 해시 저장 (인증 필수)
+  role             String             @default("EMPLOYEE") // 역할 필드 (ADMIN 또는 EMPLOYEE)
+  position         String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  // 관계
+  CardTransactions CardTransaction[]
+  Receipts         Receipt[]
+}
+
+// 2. 카드 결제 내역 (CardTransactions) - 대조의 핵심 테이블
+model CardTransaction {
+  id                   Int          @id @default(autoincrement())
+  employeeId           Int          // 결제 카드 소유 직원 ID (외래키)
+  employee             Employee     @relation(fields: [employeeId], references: [id])
+
+  card_number_mask     String       // 마스킹된 카드 번호 (예: 9412)
+  transaction_date     DateTime     @db.Timestamp(3)
+  amount               Decimal      @db.Decimal(10, 2)
+  merchant_name        String       // 가맹점 이름 (카드사 기록)
+
+  reconciliation_status String       @default("MISSING_RECEIPT") // 대조 상태
+
+  receiptId            Int?         @unique // 매칭된 영수증 ID
+  receipt              Receipt?     @relation(fields: [receiptId], references: [id])
+}
+
+// 3. 직원 제출 영수증 (Receipts)
+model Receipt {
+  id                   Int          @id @default(autoincrement())
+  employeeId           Int
+  employee             Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // OCR/수동 입력 데이터
+  ocr_amount           Decimal      @db.Decimal(10, 2)
+  ocr_date             DateTime     @db.Date
+  image_storage_url    String?      // 영수증 이미지 파일 경로
+  raw_ocr_data         Json?        // OCR 원본 데이터 (JSONB 활용)
+  
+  // 관리/상태 필드
+  is_manual_entry      Boolean      @default(false)
+  status               String       @default("PENDING") // PENDING, APPROVED, REJECTED
+  
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  // 관계: 이 영수증과 매칭된 카드 내역
+  CardTransaction      CardTransaction?
+
+  @@index([employeeId])
+  @@index([ocr_date])
+  @@index([status])
+}
+
+// 4. 사용자 모델 (User) - 일반 사용자 관리
+model User {
+  id        Int     @id @default(autoincrement())
+  email     String  @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
