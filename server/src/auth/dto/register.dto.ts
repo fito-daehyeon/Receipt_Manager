@@ -1,7 +1,7 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional } from 'class-validator';
 
 export class RegisterDto {
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
     employeeId: string; // 사번
 

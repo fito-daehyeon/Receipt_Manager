@@ -1,16 +1,15 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
-
-    @Post('register')
-    async register(@Body() registerDto: RegisterDto) {
+    
+    @Post('signup') // 프론트엔드와 경로를 일치시킴
+    async signup(@Body() registerDto: RegisterDto) {
         return this.authService.register(registerDto);
     }
 
@@ -19,18 +18,9 @@ export class AuthController {
         return this.authService.login(loginDto);
     }
 
-    @Get('profile')
     @UseGuards(JwtAuthGuard)
-    async getProfile(@CurrentUser() user: any) {
-        return user;
-    }
-
-    @Post('signup')
-    async signup(
-        @Body('email') email: string,
-        @Body('password') password: string,
-        @Body('name') name: string,
-    ) {
-        return this.authService.signup(email, password, name);
+    @Get('profile')
+    getProfile(@Request() req) {
+        return req.user;
     }
 }
