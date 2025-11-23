@@ -1,15 +1,12 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:3000';
-
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-});
+import apiClient from './apiClient';
+// 'SignupFormData'를 중괄호로 감싸주세요.
+import type { SignupFormData } from '../types.ts'; // (O)
 
 export const authAPI = {
-  signup: (email: string, password: string, name: string) =>
-    apiClient.post('/auth/signup', { email, password, name }),
-  
+  // 모든 필드를 포함하는 객체를 받도록 수정
+  signup: (formData: SignupFormData) =>
+    apiClient.post('/auth/signup', formData),
+
   login: (email: string, password: string) =>
     apiClient.post('/auth/login', { email, password }),
 };

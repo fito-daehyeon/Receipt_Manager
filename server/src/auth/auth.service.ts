@@ -14,31 +14,42 @@ export class AuthService {
 
     // 회원가입
      async register(registerDto: RegisterDto) {
-        // DTO에서는 name, email, password만 사용합니다.
-        const { name, email, password } = registerDto;
+        const { employeeId, name, email, password, position } = registerDto;
 
-        // User 테이블에서 이메일 중복을 확인합니다.
-        const existingUser = await this.prisma.user.findUnique({
-            where: { email },
-        });
-
-        if (existingUser) {
-            throw new ConflictException('Email already exists');
+        // 1. 사번 중복 확인 (employeeId가 있는 경우에만)
+        if (employeeId) {
+            const existingEmployeeById = await this.prisma.employee.findUnique({
+                where: { employeeId },
+            });
+            if (existingEmployeeById) {
+                throw new ConflictException('이미 사용 중인 사번입니다.');
+            }
         }
 
+        // 2. 이메일 중복 확인
+        const existingEmployeeByEmail = await this.prisma.employee.findUnique({
+            where: { email },
+        });
+        if (existingEmployeeByEmail) {
+            throw new ConflictException('이미 사용 중인 이메일입니다.');
+        }
+
+        // 3. 비밀번호 해싱
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Employee 테이블이 아닌 User 테이블에 사용자를 생성합니다.
-        const user = await this.prisma.user.create({
+        // 4. 직원 생성
+        const employee = await this.prisma.employee.create({
             data: {
+                employeeId, // 이제 employeeId도 함께 저장합니다.
                 name,
                 email,
                 password: hashedPassword,
+                position,
+                role: 'USER', // 기본 역할을 'USER'로 설정
             },
         });
 
-        // password 필드를 제외하고 반환
-        const { password: _, ...result } = user;
+        const { password: _, ...result } = employee;
         return result;
     }
 
